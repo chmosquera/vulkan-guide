@@ -1,5 +1,6 @@
 ﻿//> includes
 #include "vk_engine.h"
+#include "vk_images.h"
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -9,6 +10,7 @@
 
 #include <VkBootstrap.h>
 
+#include <iostream>
 #include <chrono>
 #include <thread>
 
@@ -32,7 +34,16 @@ void VulkanEngine::init()
         SDL_WINDOWPOS_UNDEFINED,
         _windowExtent.width,
         _windowExtent.height,
-        window_flags);
+        window_flags
+    );
+
+    init_vulkan();
+
+    init_swapchain();
+
+    init_commands();
+
+    init_sync_structures();
 
     // everything went fine
     _isInitialized = true;
@@ -64,11 +75,78 @@ void VulkanEngine::cleanup()
 
     // clear engine pointer
     loadedEngine = nullptr;
+
+    for (int i = 0; i < FRAME_OVERLAP; i++) {
+        vkDestroyCommandPool(_device, _frames[i]._commandPool, nullptr);
+
+        // destroy sync objects
+        vkDestroyFence(_device, _frames[i]._renderFence, nullptr);
+        vkDestroySemaphore(_device, _frames[i]._renderSemaphore, nullptr);
+        vkDestroySemaphore(_device, _frames[i]._swapchainSemaphore, nullptr);
+    }
 }
 
 void VulkanEngine::draw()
 {
-    // nothing yet
+
+    // Wait until last frame is done rendering
+    // Timeout after 1s
+    VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
+    VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
+
+    uint32_t swapchainImageIndex;
+    VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, get_current_frame()._swapchainSemaphore, nullptr, &swapchainImageIndex));
+
+    VkCommandBuffer cmd = get_current_frame()._mainCommandBuffer;
+
+    VK_CHECK(vkResetCommandBuffer(cmd, 0));
+
+    VK_CHECK(vkResetCommandBuffer(cmd, 0));
+
+    // VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT - Minor optimization
+    // Tells GPU we use buffer only once, so don't need to store anything
+    VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+    VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
+
+    // Transition image into a writeable mode
+    vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+    VkClearColorValue clearValue;
+    float flash = std::abs(std::sin(_frameNumber / 120.f));
+    clearValue = {{0.0f, 0.0f, flash, 1.0f}};
+
+    VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
+
+    vkCmdClearColorImage(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
+    vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+    VK_CHECK(vkEndCommandBuffer(cmd));
+
+    // Submission
+    VkCommandBufferSubmitInfo cmdInfo = vkinit::command_buffer_submit_info(cmd);
+    VkSemaphoreSubmitInfo waitInfo = vkinit::semaphore_submit_info(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, get_current_frame()._swapchainSemaphore);
+    VkSemaphoreSubmitInfo signalInfo = vkinit::semaphore_submit_info(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, get_current_frame()._renderSemaphore);
+
+    VkSubmitInfo2 submit = vkinit::submit_info(&cmdInfo, &signalInfo, &waitInfo);
+
+    VK_CHECK(vkQueueSubmit2(_graphicsQueue, 1, &submit, get_current_frame()._renderFence));
+
+    // Present
+    VkPresentInfoKHR presentInfo = {};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.pNext = nullptr;
+    presentInfo.pSwapchains = &_swapchain;
+    presentInfo.swapchainCount = 1;
+
+    presentInfo.pWaitSemaphores = &get_current_frame()._renderSemaphore;
+    presentInfo.waitSemaphoreCount = 1;
+
+    presentInfo.pImageIndices = &swapchainImageIndex;
+
+    VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
+
+    _frameNumber++;
 }
 
 void VulkanEngine::run()
@@ -118,6 +196,12 @@ void VulkanEngine::init_vulkan() {
         .build();
 
         vkb::Instance vkb_inst = inst_ret.value();
+        
+        _instance = vkb_inst.instance;
+        _debug_messenger = vkb_inst.debug_messenger;
+
+        // Create surface from SDL window
+        SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 
         VkPhysicalDeviceVulkan13Features features{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
         features.dynamicRendering = true;
@@ -170,6 +254,19 @@ void VulkanEngine::init_commands() {
 }
 
 void VulkanEngine::init_sync_structures() {
+
+    // Initialize the fence as signaled, so the first frame waits on it
+    // Without this, if the GPU is busy at start, then the thread gets blocked
+    VkFenceCreateInfo fenceCreateInfo = vkinit::fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
+
+    VkSemaphoreCreateInfo semaphoreCreateInfo = vkinit::semaphore_create_info();
+
+    for (int i = 0; i < FRAME_OVERLAP; i++) {
+        VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_frames[i]._renderFence));
+
+        VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_frames[i]._swapchainSemaphore));
+        VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_frames[i]._renderSemaphore));
+    }
 }
 
 void VulkanEngine::create_swapchain(uint32_t width, uint32_t height) {
