@@ -125,6 +125,9 @@ void VulkanEngine::draw()
     VkCommandBufferBeginInfo cmdBeginInfo =
         vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
+    _drawExtent.width = _drawImage.imageExtent.width;
+    _drawExtent.height = _drawImage.imageExtent.height;
+
     VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 
     // Transition image into a writeable mode
