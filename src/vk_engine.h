@@ -81,6 +81,10 @@ public:
 
     VmaAllocator _allocator;
 
+    // Draw resources
+    AllocatedImage _drawImage = {};
+    VkExtent2D _drawExtent;
+
 private:
     void init_vulkan();
     void init_swapchain();
