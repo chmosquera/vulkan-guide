@@ -55,8 +55,8 @@ public:
 
     // draw loop
     void draw();
-
     void draw_background(VkCommandBuffer cmd);
+    void draw_imgui(VkCommandBuffer imguiCmd, VkImageView targetView);
 
     // run main loop
     void run();
@@ -97,6 +97,13 @@ public:
     VkPipeline _gradientPipeline;
     VkPipelineLayout _gradientPipelineLayout;
 
+    // ImGUI - immediate commands
+    VkCommandBuffer _immCommandBuffer;
+    VkCommandPool _immCommandPool;
+    VkFence _immFence;
+
+    void immediate_submit(std::function<void(VkCommandBuffer cmd)>&&);
+
 private:
     void init_vulkan();
     void init_swapchain();
@@ -105,6 +112,7 @@ private:
     void init_descriptors();
     void init_pipelines();
     void init_background_pipelines();
+    void init_imgui();
 
     void create_swapchain(uint32_t width, uint32_t height);
     void destroy_swapchain();
