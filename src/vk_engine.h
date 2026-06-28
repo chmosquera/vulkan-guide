@@ -35,6 +35,23 @@ struct FrameData
     DeletionQueue _deletionQueue;
 };
 
+struct ComputePushConstants
+{
+    glm::vec4 data1;
+    glm::vec4 data2;
+    glm::vec4 data3;
+    glm::vec4 data4;
+};
+
+struct ComputeEffect
+{
+    const char* name;
+    VkPipeline pipeline;
+    VkPipelineLayout layout;
+    ComputePushConstants pushConstants;
+
+};
+
 class VulkanEngine
 {
 public:
@@ -104,6 +121,10 @@ public:
 
     void immediate_submit(std::function<void(VkCommandBuffer cmd)>&&);
 
+    ComputePushConstants _computePushConstants;
+    std::vector<ComputeEffect> backgroundEffects;
+    int currentComputeEffect = 0;
+
 private:
     void init_vulkan();
     void init_swapchain();
@@ -111,7 +132,6 @@ private:
     void init_sync_structures();
     void init_descriptors();
     void init_pipelines();
-    void init_background_pipelines();
     void init_imgui();
 
     void create_swapchain(uint32_t width, uint32_t height);
