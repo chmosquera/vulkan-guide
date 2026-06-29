@@ -121,7 +121,6 @@ public:
 
     void immediate_submit(std::function<void(VkCommandBuffer cmd)>&&);
 
-    ComputePushConstants _computePushConstants;
     std::vector<ComputeEffect> backgroundEffects;
     int currentComputeEffect = 0;
 

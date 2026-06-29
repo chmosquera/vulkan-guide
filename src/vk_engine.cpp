@@ -189,9 +189,7 @@ void VulkanEngine::draw_background(VkCommandBuffer cmd)
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, currentEffect.layout, 0, 1, &_drawImageDescriptors, 0, nullptr);
 
     // Set up push constants
-    ComputePushConstants pushConstants;
-    pushConstants.data1 = glm::vec4(1, 0, 0, 1);
-    pushConstants.data2 = glm::vec4(0, 0, 1, 1);
+    ComputePushConstants pushConstants = backgroundEffects[currentComputeEffect].pushConstants;
     vkCmdPushConstants(cmd, currentEffect.layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pushConstants), &pushConstants);
 
     // execute the compute pipeline
@@ -251,7 +249,7 @@ void VulkanEngine::run()
 
         if (ImGui::Begin("background"))
         {
-            ComputeEffect currentEffect = backgroundEffects[currentComputeEffect];
+            ComputeEffect& currentEffect = backgroundEffects[currentComputeEffect];
 
             ImGui::Text("Shader effect");
             ImGui::SliderInt("index", &currentComputeEffect, 0, backgroundEffects.size()-1);
@@ -487,7 +485,7 @@ void VulkanEngine::init_pipelines()
 {
     VkPushConstantRange pushConstantRange{};
     pushConstantRange.offset = 0;
-    pushConstantRange.size = sizeof(_computePushConstants);
+    pushConstantRange.size = sizeof(ComputePushConstants);
     pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
     // create pipeline layout
@@ -503,7 +501,7 @@ void VulkanEngine::init_pipelines()
 
     // Create the gradient shader
     VkShaderModule gradientShader;
-    if (!vkutil::load_shader_module("../shaders/gradient.comp.spv", _device, &gradientShader))
+    if (!vkutil::load_shader_module("../shaders/gradient_color.comp.spv", _device, &gradientShader))
     {
         fmt::print("Error when building the compute shader\n");
     }
@@ -524,9 +522,10 @@ void VulkanEngine::init_pipelines()
     ComputeEffect gradientEffect {};
     gradientEffect.name = "gradient";
     gradientEffect.layout = _gradientPipelineLayout;
-    gradientEffect.pushConstants = _computePushConstants;
-    _computePushConstants.data1 = glm::vec4(1,0,0,1);
-    _computePushConstants.data2 = glm::vec4(0,0,1,1);
+    gradientEffect.pushConstants = ComputePushConstants {
+        .data1 = glm::vec4(0.5,0.2,0,1),
+        .data2 = glm::vec4(0,0,1,1)
+    };
 
     VK_CHECK(vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &gradientEffect.pipeline));
 
@@ -542,8 +541,9 @@ void VulkanEngine::init_pipelines()
     ComputeEffect skyEffect {};
     skyEffect.name = "sky";
     skyEffect.layout = _gradientPipelineLayout;
-    skyEffect.pushConstants = _computePushConstants;
-    _computePushConstants.data1 = glm::vec4(0.4,0.5,0.1,1);
+    skyEffect.pushConstants = ComputePushConstants {
+        .data1 = glm::vec4(0.4,0.5,0.1,1)
+    };
 
     VK_CHECK(vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &skyEffect.pipeline));
 
