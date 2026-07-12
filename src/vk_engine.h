@@ -74,6 +74,7 @@ public:
     void draw();
     void draw_background(VkCommandBuffer cmd);
     void draw_imgui(VkCommandBuffer imguiCmd, VkImageView targetView);
+    void draw_geometry(const VkCommandBuffer& cmd);
 
     // run main loop
     void run();
@@ -124,6 +125,10 @@ public:
     std::vector<ComputeEffect> backgroundEffects;
     int currentComputeEffect = 0;
 
+    // Triangle pipeline
+    VkPipeline _trianglePipeline;
+    VkPipelineLayout _trianglePipelineLayout;
+
 private:
     void init_vulkan();
     void init_swapchain();
@@ -135,4 +140,6 @@ private:
 
     void create_swapchain(uint32_t width, uint32_t height);
     void destroy_swapchain();
+
+    void init_triangle_pipeline();
 };

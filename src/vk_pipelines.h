@@ -19,6 +19,9 @@ namespace vkutil {
         void set_color_attachment_format(VkFormat);
         void set_depth_format(VkFormat);
         void disable_depth_test();
+
+        VkPipelineLayout _pipelineLayout;
+
     private:
         std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
         VkPipelineInputAssemblyStateCreateInfo _inputAssemblyState;
@@ -30,7 +33,6 @@ namespace vkutil {
         VkFormat _colorAttachmentFormat;
 
         VkPipelineRenderingCreateInfo _renderPipeline;
-        VkPipelineLayout _pipelineLayout;
     };
 
     bool load_shader_module(const char* filePath, VkDevice device, VkShaderModule* outShaderModule);

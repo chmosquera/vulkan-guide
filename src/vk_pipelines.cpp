@@ -140,8 +140,8 @@ namespace vkutil
     void PipelineBuilder::set_shaders(const VkShaderModule& vertexShader, const VkShaderModule& fragmentShader)
     {
         _shaderStages.clear();
-        VkPipelineShaderStageCreateInfo vertexStage = vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, vertexShader, "vertex");
-        VkPipelineShaderStageCreateInfo fragmentStage = vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader, "fragment");
+        VkPipelineShaderStageCreateInfo vertexStage = vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, vertexShader, "main");
+        VkPipelineShaderStageCreateInfo fragmentStage = vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader, "main");
         _shaderStages.push_back(vertexStage);
         _shaderStages.push_back(fragmentStage);
     }
