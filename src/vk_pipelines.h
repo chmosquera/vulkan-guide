@@ -17,9 +17,8 @@ namespace vkutil {
         void set_multisampling_none();
         void disable_blending();
         void set_color_attachment_format(VkFormat);
-        void set_depth_format();
+        void set_depth_format(VkFormat);
         void disable_depth_test();
-
     private:
         std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
         VkPipelineInputAssemblyStateCreateInfo _inputAssemblyState;

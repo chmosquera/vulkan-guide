@@ -137,13 +137,72 @@ namespace vkutil
         return pipeline;
     };
 
-    // void PipelineBuilder::set_shaders(const VkShaderModule&, const VkShaderModule&);
-    // void PipelineBuilder::set_input_topology(VkPrimitiveTopology);
-    // void PipelineBuilder::set_polygon_mode(VkPolygonMode);
-    // void PipelineBuilder::set_cull_mode(VkCullModeFlags, VkFrontFace);
-    // void PipelineBuilder::set_multisampling_none();
-    // void PipelineBuilder::disable_blending();
-    // void PipelineBuilder::set_color_attachment_format(VkFormat);
-    // void PipelineBuilder::set_depth_format();
-    // void PipelineBuilder::disable_depth_test();
+    void PipelineBuilder::set_shaders(const VkShaderModule& vertexShader, const VkShaderModule& fragmentShader)
+    {
+        _shaderStages.clear();
+        VkPipelineShaderStageCreateInfo vertexStage = vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, vertexShader, "vertex");
+        VkPipelineShaderStageCreateInfo fragmentStage = vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader, "fragment");
+        _shaderStages.push_back(vertexStage);
+        _shaderStages.push_back(fragmentStage);
+    }
+
+    void PipelineBuilder::set_input_topology(VkPrimitiveTopology mode)
+    {
+        _inputAssemblyState.topology = mode;
+        _inputAssemblyState.primitiveRestartEnable = false;
+    }
+
+    void PipelineBuilder::set_polygon_mode(VkPolygonMode mode)
+    {
+        _rasterizationState.polygonMode = mode;
+        _rasterizationState.lineWidth = 1.f;
+    }
+
+    void PipelineBuilder::set_cull_mode(VkCullModeFlags cullMode, VkFrontFace frontFace)
+    {
+        _rasterizationState.flags = cullMode;
+        _rasterizationState.frontFace = frontFace;
+    }
+
+    void PipelineBuilder::set_multisampling_none()
+    {
+        _multisampleState.sampleShadingEnable = VK_FALSE;
+        _multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        _multisampleState.minSampleShading = 1.0f;
+        _multisampleState.pSampleMask = nullptr;
+        _multisampleState.alphaToCoverageEnable = VK_FALSE;
+        _multisampleState.alphaToOneEnable = VK_FALSE;
+    }
+
+    void PipelineBuilder::disable_blending()
+    {
+        _colorBlendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        _colorBlendAttachmentState.blendEnable = VK_FALSE;
+    }
+
+    void PipelineBuilder::set_color_attachment_format(VkFormat format)
+    {
+        _colorAttachmentFormat = format;
+
+        _renderPipeline.colorAttachmentCount = 1;
+        _renderPipeline.pColorAttachmentFormats = &_colorAttachmentFormat;
+    }
+
+    void PipelineBuilder::set_depth_format(VkFormat format)
+    {
+        _renderPipeline.depthAttachmentFormat = format;
+    }
+
+    void PipelineBuilder::disable_depth_test()
+    {
+        _depthStencilState.depthTestEnable = VK_FALSE;
+        _depthStencilState.depthWriteEnable = VK_FALSE;
+        _depthStencilState.depthCompareOp = VK_COMPARE_OP_NEVER;
+        _depthStencilState.depthBoundsTestEnable = VK_FALSE;
+        _depthStencilState.stencilTestEnable = VK_FALSE;
+        _depthStencilState.front = {};
+        _depthStencilState.back = {};
+        _depthStencilState.minDepthBounds = 0.f;
+        _depthStencilState.maxDepthBounds = 1.f;
+    }
 }
